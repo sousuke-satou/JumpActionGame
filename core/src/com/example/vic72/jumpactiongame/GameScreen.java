@@ -3,6 +3,7 @@ package com.example.vic72.jumpactiongame;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -40,6 +41,7 @@ public class GameScreen extends ScreenAdapter{
     static final float GRAVITY = -12;
 
     private JumpActionGame mGame;
+    private Sound sound;
 
     Sprite mBg;
     OrthographicCamera mCamera;
@@ -173,7 +175,9 @@ public class GameScreen extends ScreenAdapter{
         Texture starTexture = new Texture("star.png");
         Texture playerTexture = new Texture("uma.png");
         Texture ufoTexture = new Texture("ufo.png");
-        Texture enemyTexture = new Texture("ufo.png");
+        Texture enemyTexture = new Texture("uma.png");
+
+         sound = Gdx.audio.newSound(Gdx.files.internal("sample.mp3"));
 
         // StepとStarをゴールの高さまで配置していく
         float y = 0;
@@ -192,7 +196,7 @@ public class GameScreen extends ScreenAdapter{
                 star.setPosition(step.getX() + mRandom.nextFloat(), step.getY() + Star.STAR_HEIGHT + mRandom.nextFloat() * 3);
                 mStars.add(star);
             }
-            if (mRandom.nextFloat() > 0.6f) {
+            if (mRandom.nextFloat() > 0.75f) {
                 enemy Enemy = new enemy(enemyTexture, 0, 0, 72, 72);
                 Enemy.setPosition(step.getX() + mRandom.nextFloat(), step.getY() + enemy.ENEMY_HEIGHT + mRandom.nextFloat() * 3);
                 mEnemies.add(Enemy);
@@ -285,57 +289,64 @@ public class GameScreen extends ScreenAdapter{
             if (star.mState == Star.STAR_NONE) {
                 continue;
             }
+
+            if (mPlayer.getBoundingRectangle().overlaps(star.getBoundingRectangle())) {
+                star.get();
+                mScore++; // ←追加する
+                if (mScore > mHighScore) { // ←追加する
+                    mHighScore = mScore; // ←追加する
+                    //ハイスコアをPreferenceに保存する
+                    mPrefs.putInteger("HIGHSCORE", mHighScore); // ←追加する
+                    mPrefs.flush(); // ←追加する
+                } // ←追加する
+                break;
+            }
+        }
             //ENEMYとの当たり判定
-            for (int l = 0; l < mEnemies.size(); l++) {
+            for (int i = 0; i < mEnemies.size(); i++) {
                enemy Enemy = mEnemies.get(i);
 
 
           if(mPlayer.getBoundingRectangle().overlaps(Enemy.getBoundingRectangle())) {
               Gdx.app.log("JampActionGame", "GAMEOVER");
+              sound.play(1.0f);
               mGameState = GAME_STATE_GAMEOVER;
               return;
 
           }
 
 
-                if (mPlayer.getBoundingRectangle().overlaps(star.getBoundingRectangle())) {
-                    star.get();
-                    mScore++; // ←追加する
-                    if (mScore > mHighScore) { // ←追加する
-                        mHighScore = mScore; // ←追加する
-                        //ハイスコアをPreferenceに保存する
-                        mPrefs.putInteger("HIGHSCORE", mHighScore); // ←追加する
-                        mPrefs.flush(); // ←追加する
-                    } // ←追加する
-                    break;
-                }
-            }
 
-            // Stepとの当たり判定
-            // 上昇中はStepとの当たり判定を確認しない
-            if (mPlayer.velocity.y > 0) {
-                return;
-            }
-
-            for (int i1 = 0; i1 < mSteps.size(); i1++) {
-                Step step = mSteps.get(i);
-
-                if (step.mState == Step.STEP_STATE_VANISH) {
-                    continue;
                 }
 
-                if (mPlayer.getY() > step.getY()) {
-                    if (mPlayer.getBoundingRectangle().overlaps(step.getBoundingRectangle())) {
-                        mPlayer.hitStep();
-                        if (mRandom.nextFloat() > 0.5f) {
-                            step.vanish();
-                        }
-                        break;
+        // Stepとの当たり判定
+        // 上昇中はStepとの当たり判定を確認しない
+        if (mPlayer.velocity.y > 0) {
+            return;
+        }
+
+        for (int i = 0; i < mSteps.size(); i++) {
+            Step step = mSteps.get(i);
+
+            if (step.mState == Step.STEP_STATE_VANISH) {
+                continue;
+            }
+
+            if (mPlayer.getY() > step.getY()) {
+                if (mPlayer.getBoundingRectangle().overlaps(step.getBoundingRectangle())) {
+                    mPlayer.hitStep();
+                    if (mRandom.nextFloat() > 0.5f) {
+                        step.vanish();
                     }
+                    break;
                 }
             }
         }
     }
+
+
+
+
     private void checkGameOver() {
         if (mHeightSoFar - CAMERA_HEIGHT / 2 > mPlayer.getY()) {
             Gdx.app.log("JampActionGame", "GAMEOVER");
